@@ -1,0 +1,132 @@
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import jsPDF from "jspdf";
+
+export default function EbookForgeAI() {
+  const [theme, setTheme] = useState("");
+  const [structure, setStructure] = useState("Guia passo a passo");
+  const [pages, setPages] = useState(10);
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const aiOptions = ["GPT-4.5", "Claude", "Gemini", "Mistral"];
+
+  const generateEbook = async (selectedAI) => {
+    setLoading(true);
+    try {
+      const response = await fetch("https://api.seuservidor.com/generate-ebook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ theme, structure, pages, ai: selectedAI })
+      });
+      const data = await response.json();
+      setContent(data.text);
+    } catch (err) {
+      console.error("Erro ao gerar eBook", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateForce = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("https://api.seuservidor.com/generate-force", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ theme, structure, pages })
+      });
+      const data = await response.json();
+      setContent(data.text);
+    } catch (err) {
+      console.error("Erro no modo FORCE", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text(content || "Sem conteúdo gerado.", 10, 10);
+    doc.save(`${theme || "ebook"}.pdf`);
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto p-4 space-y-4">
+      <h1 className="text-3xl font-bold">eBook Forge AI</h1>
+
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <Input
+            placeholder="Tema do eBook"
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+          />
+
+          <div className="space-y-2">
+            <label>Estrutura:</label>
+            <select
+              className="w-full border p-2 rounded"
+              value={structure}
+              onChange={(e) => setStructure(e.target.value)}
+            >
+              <option>Guia passo a passo</option>
+              <option>Checklist</option>
+              <option>Manual técnico</option>
+              <option>Dicas práticas</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label>Tamanho do eBook:</label>
+            <div className="flex gap-2">
+              {[10, 20, 50].map((p) => (
+                <Button
+                  key={p}
+                  variant={pages === p ? "default" : "outline"}
+                  onClick={() => setPages(p)}
+                >
+                  {p} páginas
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label>Escolher IA:</label>
+            <div className="flex flex-wrap gap-2">
+              {aiOptions.map((ai) => (
+                <Button key={ai} onClick={() => generateEbook(ai)}>
+                  {ai}
+                </Button>
+              ))}
+              <Button variant="destructive" onClick={generateForce}>
+                FORCE (Todas as IAs)
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-2">
+        <h2 className="text-xl font-semibold">Prévia do eBook:</h2>
+        {loading ? (
+          <p>⏳ Gerando conteúdo...</p>
+        ) : (
+          <textarea
+            className="w-full h-64 p-2 border rounded"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
+        )}
+        <Button onClick={exportToPDF}>📄 Exportar como PDF</Button>
+      </div>
+    </div>
+  );
+}
